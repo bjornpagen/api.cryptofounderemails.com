@@ -1,3 +1,3 @@
-module github.com/bjornpagen/cryptofounderemails.com
+module github.com/bjornpagen/api.cryptofounderemails.com
 
 go 1.19
