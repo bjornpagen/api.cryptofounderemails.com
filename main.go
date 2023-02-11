@@ -28,16 +28,16 @@ func loadEnv() {
 		log.Fatalln("ID_DB environment variable not set.")
 	}
 
-	if os.Getenv("DOMAIN") == "" {
-		log.Fatalln("DOMAIN environment variable not set.")
+	if os.Getenv("CLIENT_DOMAIN") == "" {
+		log.Fatalln("CLIENT_DOMAIN environment variable not set.")
+	}
+
+	if os.Getenv("API_DOMAIN") == "" {
+		log.Fatalln("API_DOMAIN environment variable not set.")
 	}
 
 	if os.Getenv("TLS_DISABLED") == "" {
 		log.Fatalln("TLS_DISABLED environment variable not set.")
-	}
-
-	if os.Getenv("CLIENT_DOMAIN") == "" {
-		log.Fatalln("CLIENT_DOMAIN environment variable not set.")
 	}
 
 	if os.Getenv("STRIPE_KEY") == "" {
@@ -73,7 +73,7 @@ func main() {
 	}
 
 	server := &MainServer{
-		apiDomain:            os.Getenv("DOMAIN"),
+		apiDomain:            os.Getenv("API_DOMAIN"),
 		lookup:               lookup.New(lookupDb, log.New(os.Stderr, "lookup: ", log.LstdFlags), os.Getenv("CLIENT_DOMAIN")),
 		tlsDisabled:          os.Getenv("TLS_DISABLED") == "true",
 		stripeKey:            os.Getenv("STRIPE_KEY"),
