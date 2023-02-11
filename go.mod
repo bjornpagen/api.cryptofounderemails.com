@@ -7,6 +7,7 @@ require (
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/go-chi/httprate v0.7.1
 	github.com/joho/godotenv v1.5.1
+	github.com/stripe/stripe-go v70.15.0+incompatible
 	golang.org/x/crypto v0.6.0
 )
 

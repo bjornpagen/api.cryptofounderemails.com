@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/httprate"
 	"github.com/joho/godotenv"
+	stripe "github.com/stripe/stripe-go"
 	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/bjornpagen/e2e-marketing-monorepo/server/lookup"
@@ -38,6 +39,14 @@ func loadEnv() {
 	if os.Getenv("CLIENT_DOMAIN") == "" {
 		log.Fatalln("CLIENT_DOMAIN environment variable not set.")
 	}
+
+	if os.Getenv("STRIPE_KEY") == "" {
+		log.Fatalln("STRIPE_KEY environment variable not set.")
+	}
+
+	if os.Getenv("STRIPE_WEBHOOK_SECRET") == "" {
+		log.Fatalln("STRIPE_WEBHOOK_SECRET environment variable not set.")
+	}
 }
 
 func loadDb() (map[lookup.Id]lookup.User, error) {
@@ -62,12 +71,13 @@ func main() {
 	if err != nil {
 		log.Fatalln("Error loading id db:", err)
 	}
-	lookupClient := lookup.New(lookupDb, log.New(os.Stderr, "lookup: ", log.LstdFlags), os.Getenv("CLIENT_DOMAIN"))
 
 	server := &MainServer{
-		apiDomain:   "api." + os.Getenv("DOMAIN"),
-		lookup:      lookupClient,
-		tlsDisabled: os.Getenv("TLS_DISABLED") == "true",
+		apiDomain:            os.Getenv("DOMAIN"),
+		lookup:               lookup.New(lookupDb, log.New(os.Stderr, "lookup: ", log.LstdFlags), os.Getenv("CLIENT_DOMAIN")),
+		tlsDisabled:          os.Getenv("TLS_DISABLED") == "true",
+		stripeKey:            os.Getenv("STRIPE_KEY"),
+		stripeWebhookHandler: createStripeWebhookHandler(os.Getenv("STRIPE_WEBHOOK_SECRET")),
 	}
 
 	if err := server.run(); err != nil {
@@ -76,17 +86,23 @@ func main() {
 }
 
 type MainServer struct {
-	apiDomain   string
-	lookup      *lookup.LookupClient
-	tlsDisabled bool
+	stripeKey            string
+	stripeWebhookHandler http.HandlerFunc
+	apiDomain            string
+	lookup               *lookup.LookupClient
+	tlsDisabled          bool
 }
 
 func (s *MainServer) run() (err error) {
+	// setup stripe
+	stripe.Key = s.stripeKey
+
 	// setup router
 	r := setupRouter()
 
 	r.Post("/lookup", s.lookup.LookupHandler)
 	r.Options("/lookup", s.lookup.OptionsHandler)
+	r.Post("/stripe/webhook", s.stripeWebhookHandler)
 
 	srv := &http.Server{
 		ReadTimeout:  5 * time.Second,
